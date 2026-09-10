@@ -1,101 +1,66 @@
-Electricity Price Anomaly Detection – Queensland (NEM Market)
-==============================================================
+# Electricity Price Anomaly Detection — NEM Queensland
 
-This project was developed for IFN695 - Minor Research Project 
-at Queensland University of Technology (QUT).
+> Unsupervised anomaly detection on Queensland's National Electricity Market wholesale price data, combining a classical and a deep learning approach and comparing where they agree.
 
-It focuses on detecting electricity price anomalies in Queensland’s 
-National Electricity Market (NEM) using two unsupervised learning techniques:
-Isolation Forest and LSTM Autoencoder.
+![Python](https://img.shields.io/badge/Python-3-3776AB?style=flat-square&logo=python&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-Isolation%20Forest-F7931E?style=flat-square&logo=scikit-learn&logoColor=white)
+![TensorFlow](https://img.shields.io/badge/TensorFlow-LSTM%20Autoencoder-FF6F00?style=flat-square&logo=tensorflow&logoColor=white)
+![Pandas](https://img.shields.io/badge/Pandas-Data%20Wrangling-150458?style=flat-square&logo=pandas&logoColor=white)
 
+QUT Minor Project (IFN695), February to June 2025.
 
---------------------------------------------------------------
-OBJECTIVE
---------------------------------------------------------------
-To develop a label-free anomaly detection framework that identifies 
-electricity price spikes or drops by analyzing historical market and 
-weather data.
+---
 
-The project aims to uncover:
-- Hidden temporal patterns in pricing anomalies
-- Environmental and operational factors influencing price volatility
-- Market conditions leading to high-risk events
+## 📌 Overview
 
+Electricity prices on Australia's National Electricity Market can spike or behave erratically for reasons that aren't always obvious from the price series alone. This project builds a dual-model pipeline to flag those irregular periods in Queensland's market and checks whether a purely statistical method and a purely learned method actually agree on what looks unusual.
 
---------------------------------------------------------------
-DATASETS USED
---------------------------------------------------------------
-1. AEMO Market Datasets:
-   - DISPATCHPRICE: 5-minute dispatch prices
-   - DISPATCHREGIONSUM: 5-minute summary of demand, generation, and flow
-   - TRADINGPRICE: 30-minute trading prices
+Two complementary techniques are used side by side rather than picking one:
 
-2. Bureau of Meteorology (BoM) Weather Data:
-   - Temperature
-   - Rainfall
-   - Solar Radiation
+- **Isolation Forest** — flags anomalies based on how easily a point can be isolated in feature space, with no notion of time order.
+- **LSTM Autoencoder** — learns to reconstruct normal 96-step price sequences, then flags the ones it reconstructs badly.
 
-Region: Queensland (QLD)
-Time Period: January 2022 – December 2024
+## 📊 Dataset
 
+- Australian Energy Market Operator (AEMO) dispatch and trading price data, 2022 to 2024
+- Bureau of Meteorology weather records for the same period, merged in
+- 220,000+ half-hourly records after merging and cleaning
+- 13 engineered features: lagged price, percentage price change, demand forecast error, hour-of-day and day-of-week, plus temperature, solar radiation and rainfall
 
---------------------------------------------------------------
-FEATURES ENGINEERED
---------------------------------------------------------------
-- lagged_RRP: Rolling lag of regional reference price
-- price_change_pct: Percentage price change between consecutive intervals
-- demand_error: Difference between forecasted and actual demand
-- hour_of_day, day_of_week: Temporal context features
-- Weather variables: TEMPERATURE, RAINFALL, SOLAR_RADIATION
-- All features normalized using MinMaxScaler
+## 🔍 Methodology
 
+- Feature scaling with `MinMaxScaler` across all 13 engineered features
+- **Isolation Forest**: 100 estimators, contamination set to 2%, trained on the full scaled feature set
+- **LSTM Autoencoder**: 96-step sliding windows (one day at 15-minute resolution), a 64-unit LSTM encoder/decoder with a `RepeatVector` bottleneck, trained to minimise reconstruction MSE; anomalies flagged above the 95th percentile of reconstruction error
+- Results from both models joined on the same timestamps to compare agreement, not just each model in isolation
 
---------------------------------------------------------------
-MODELS USED
---------------------------------------------------------------
-1. Isolation Forest
-   - Detects anomalies based on feature-space rarity
-   - Effective for multidimensional unsupervised detection
+## 📈 Results
 
-2. LSTM Autoencoder
-   - Learns temporal dependencies and reconstruction patterns
-   - Flags anomalies based on high reconstruction error
+![RRP vs Temperature with LSTM anomalies highlighted](electricity-rrp-vs-temperature.png)
 
+The LSTM Autoencoder flagged 10,852 points as anomalous (its top 5% by reconstruction error); Isolation Forest flagged 4,343 (its fixed 2% contamination rate). The two models agreed on 1,563 anomalies.
 
---------------------------------------------------------------
-RESULTS & INSIGHTS
---------------------------------------------------------------
-- Both models detected overlapping high-confidence anomalies
-- Clusters of anomalies observed during:
-  • Weekday mornings (peak demand)
-  • Weekend evenings (demand drops)
-- Environmental variables such as temperature correlated strongly 
-  with anomaly intensity and frequency
-- The dual-model agreement enhanced interpretability and reliability
+![Overlap of anomalies detected by both models](electricity-anomaly-overlap.png)
 
+Comparing feature medians between the anomalies both models agree on and normal periods, `TOTALDEMAND` and `demand_error` show the largest deviation, followed by `DISPATCHABLEGENERATION` and lagged price. Temperature also correlates with where anomalies cluster, visible in the scatter plot above.
 
---------------------------------------------------------------
-CONCLUSIONS
---------------------------------------------------------------
-The hybrid unsupervised approach provided a robust way to detect and 
-analyze electricity price anomalies without labeled data. The study 
-demonstrates that combining feature-space and temporal anomaly detection 
-methods (Isolation Forest + LSTM Autoencoder) can yield consistent and 
-interpretable anomaly signals for the Queensland NEM market.
+![Top 10 median deviations in common anomalies](electricity-median-deviations.png)
 
+## 🛠️ Tech Stack
 
---------------------------------------------------------------
-AUTHOR INFORMATION
---------------------------------------------------------------
-Varun Vikas Jaiswal
-Student ID: N11736089
-Queensland University of Technology (QUT)
-Unit: IFN695 - Minor Research Project
-Year: 2025
+| Technology | Purpose |
+|---|---|
+| Python | Core language |
+| Pandas / NumPy | Data merging, cleaning, feature engineering |
+| scikit-learn | Isolation Forest, `MinMaxScaler` |
+| TensorFlow / Keras | LSTM Autoencoder |
+| Matplotlib | All result visualisations |
 
---------------------------------------------------------------
-KEYWORDS
---------------------------------------------------------------
-Electricity Pricing, NEM, Queensland, Isolation Forest, 
-LSTM Autoencoder, Anomaly Detection, Unsupervised Learning, 
-Machine Learning, Energy Analytics, Time Series Analysis
+## 📁 Files
+
+- [`N11736089_VarunVikasJaiswal_IFN695.ipynb`](N11736089_VarunVikasJaiswal_IFN695.ipynb) — full analysis notebook
+- [`N11736089_VarunVikasJaiswal_IFN695.pdf`](N11736089_VarunVikasJaiswal_IFN695.pdf) — exported report
+
+---
+
+**Author:** Varun Vikas Jaiswal (QUT, 2025)
